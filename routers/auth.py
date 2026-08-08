@@ -56,7 +56,7 @@ async def register(payload: RegisterRequest):
 async def login(payload: LoginRequest):
     email = payload.email.lower()
     user = await users_collection.find_one({"email": email})
-
+    print(f"Login attempt for email: {email},Login attempt password {user['password']}")
     if not user or not verify_password(payload.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 

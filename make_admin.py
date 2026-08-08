@@ -4,7 +4,7 @@ Promotes an existing user to admin. Run from the bikezone-backend folder:
     python make_admin.py someone@example.com
 """
 
-import asyncio
+import asyncio  
 import sys
 
 from database import users_collection
