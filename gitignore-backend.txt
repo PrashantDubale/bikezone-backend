@@ -1,0 +1,17 @@
+# Save this as .gitignore in bikezone-backend (replace the existing one)
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# OS
+.DS_Store
+Thumbs.db

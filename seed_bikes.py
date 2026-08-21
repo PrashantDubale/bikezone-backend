@@ -4,13 +4,8 @@ Run from the bikezone-backend folder:
 
     python seed_bikes.py
 
-SAFE TO RE-RUN: this upserts each bike from the JSON file by its id
-(brand+name slug). It only touches bikes that come from the JSON file —
-it never deletes or wipes the collection, so any bikes added manually
-through the Admin panel are left untouched.
-
-If a bike from the JSON already exists in MongoDB (same id), its catalog
-fields are updated in place. If it doesn't exist yet, it's inserted.
+Safe to re-run — it clears the bikes collection first, so you won't get
+duplicates.
 """
 
 import asyncio
@@ -20,7 +15,10 @@ from pathlib import Path
 
 from database import bikes_collection
 
-DATA_FILE = Path(r"d:\PD\IMAGES_BIKES\india_bikes_under_350cc_2026.json")
+# Resolved relative to this script's own folder, so it works no matter
+# which directory you run "python seed_bikes.py" from, and on any machine
+# (the old hardcoded "d:\PD\..." path only existed on one dev's laptop).
+DATA_FILE = Path(__file__).resolve().parent / "data" / "bikes-source.json"
 IMAGE_FALLBACK = "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&h=400&fit=crop"
 
 
@@ -123,35 +121,23 @@ def normalize_bike(raw_bike, index: int) -> dict:
 
 
 async def seed():
+    if not DATA_FILE.exists():
+        raise FileNotFoundError(
+            f"Could not find bike data at {DATA_FILE}. "
+            "Make sure data/bikes-source.json exists next to this script."
+        )
+
     with DATA_FILE.open("r", encoding="utf-8") as handle:
         payload = json.load(handle)
 
     motorcycles = payload.get("motorcycles", payload if isinstance(payload, list) else [])
     bikes = [normalize_bike(bike, index) for index, bike in enumerate(motorcycles)]
 
-    print(f"Preparing to upsert {len(bikes)} bikes from the catalog file...")
-
-    inserted = 0
-    updated = 0
-
-    for bike in bikes:
-        # Preserve any admin-set fields (like is_new) that aren't part of
-        # the catalog file, by only $set-ing the catalog fields — this
-        # never removes fields that already exist on the document.
-        result = await bikes_collection.update_one(
-            {"id": bike["id"]},
-            {"$set": bike},
-            upsert=True,
-        )
-        if result.upserted_id is not None:
-            inserted += 1
-        elif result.modified_count > 0:
-            updated += 1
-
-    total_in_db = await bikes_collection.count_documents({})
-
-    print(f"Done. Inserted {inserted} new bikes, updated {updated} existing catalog bikes.")
-    print(f"Total bikes now in MongoDB: {total_in_db} (includes any admin-added bikes, untouched).")
+    print(f"Preparing to import {len(bikes)} bikes...")
+    await bikes_collection.delete_many({})
+    if bikes:
+        await bikes_collection.insert_many(bikes)
+    print(f"Done. Inserted {len(bikes)} bikes into MongoDB.")
 
 
 if __name__ == "__main__":

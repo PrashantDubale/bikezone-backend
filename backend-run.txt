@@ -1,0 +1,15 @@
+ for backend 
+      cd bikezone-backend
+      python -m venv venv
+      venv\Scripts\activate
+      pip install -r requirements.txt
+      python main.py
+
+to task kill
+      taskkill /F /IM node.exe
+      taskkill /F /IM python.exe
+
+
+mongodb
+      net start MongoDB
+      net stop MongoDB
